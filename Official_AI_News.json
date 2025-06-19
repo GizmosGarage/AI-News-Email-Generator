@@ -1,0 +1,231 @@
+{
+  "name": "Official AI News",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1060,
+        60
+      ],
+      "name": "Schedule Trigger",
+      "id": "63af70aa-ddd2-48fe-a21f-706b02875e84"
+    },
+    {
+      "parameters": {
+        "url": "https://gnews.io/api/v4/search?q=artificial%20intelligence&lang=en&country=us&max=5&token=61cb8cb0539225341858ad29034da2be",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -860,
+        60
+      ],
+      "name": "Fetch Top AI News (GNews)",
+      "id": "1cc0ccb4-5a43-4039-ba3b-19234df9506c"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Filter to only free, US-based articles excluding known low-quality or commercial sites\nreturn $json.articles\n  .filter(article => {\n    const url = (article.url || '').toLowerCase();\n\n    // Block known premium/paywall sources and low-quality tech news\n    const blockedDomains = [\n      'wsj.com', 'ft.com', 'bloomberg.com', 'nytimes.com',\n      'economist.com', 'cnet.com', 'zdnet.com', 'techradar.com', 'tomshardware.com'\n    ];\n\n    return url.includes('.com') && !blockedDomains.some(domain => url.includes(domain));\n  })\n  .map(article => ({ json: article }));"
+      },
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -660,
+        -60
+      ],
+      "name": "Filter Free US Articles",
+      "id": "14a53c3a-c06f-4f44-b3e8-c56e4f370fe5"
+    },
+    {
+      "parameters": {
+        "functionCode": "\nconst articles = items.map(item => item.json);\nreturn articles.map(a => {\n  const title = a.title || '';\n  const description = a.description || '';\n  const url = a.url || '';\n  return {\n    json: {\n      title,\n      description,\n      url,\n      prompt: `Title: ${title}\\nDescription: ${description}\\nURL: ${url}`\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -60
+      ],
+      "name": "Format Articles",
+      "id": "8c17416b-87d7-4c2d-9fe6-ed679fdc0a90"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a 1–2 paragraph summary for the following AI article as an AI journalist. Include a headline and the URL.\n\n{{$json.prompt}}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        -60
+      ],
+      "name": "Summarize Articles",
+      "id": "00224600-218a-41a7-ac91-e8c4b9f29cc3"
+    },
+    {
+      "parameters": {
+        "sendTo": "ethan.e.sessoms@gmail.com",
+        "subject": "={{ '🧠 AI News Digest – ' + new Date().toLocaleDateString() }}",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        360,
+        -140
+      ],
+      "name": "Send Gmail",
+      "id": "26751035-ecd1-415e-b469-596088ba3adc",
+      "webhookId": "f7b58ca3-f095-405c-acfd-e7f0dec5cb7e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Q2L0U8KoIwcwYcJP",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "\nconst summaries = items.map(item => item.json.output || item.json.text || '');\nreturn [{\n  json: {\n    output: summaries.join(\"\\n\\n\")\n  }\n}];\n"
+      },
+      "name": "Combine Summaries",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        140,
+        -140
+      ],
+      "id": "63188ea8-c5ea-4106-9bab-052c289cc461"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        180
+      ],
+      "id": "f513155f-1ea6-4570-884b-6f53ca4efd2a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "1TK0K1KnJRa62nBU",
+          "name": "DEMO"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Top AI News (GNews)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Top AI News (GNews)": {
+      "main": [
+        [
+          {
+            "node": "Filter Free US Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Free US Articles": {
+      "main": [
+        [
+          {
+            "node": "Format Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Articles": {
+      "main": [
+        [
+          {
+            "node": "Summarize Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Articles": {
+      "main": [
+        [
+          {
+            "node": "Combine Summaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Summaries": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize Articles",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8b126091-2c0c-4418-9740-13b18e43a2d4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "349df73b79b47a27bfcb3c32f3eb6cb51f6757ac34b24a2449e098b411c007a3"
+  },
+  "id": "Ti0jNZIyLdqx0iM8",
+  "tags": []
+}
