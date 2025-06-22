@@ -22,7 +22,7 @@
     },
     {
       "parameters": {
-        "url": "https://gnews.io/api/v4/search?q=artificial%20intelligence&lang=en&country=us&max=5&token=61cb8cb0539225341858ad29034da2be",
+        "url": "https://gnews.io/api/v4/search?q=artificial%20intelligence&lang=en&country=us&max=API_CODE",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -77,7 +77,7 @@
     },
     {
       "parameters": {
-        "sendTo": "ethan.e.sessoms@gmail.com",
+        "sendTo": "ENTER_EMAIL_ADDRESS",
         "subject": "={{ '🧠 AI News Digest – ' + new Date().toLocaleDateString() }}",
         "emailType": "text",
         "message": "={{ $json.output }}",
